@@ -1,0 +1,10 @@
+image1.jpg	A group of people playing soccer in a park
+image2.jpg	A beautiful sunset over the ocean with palm trees
+image3.jpg	A close-up of a red rose in full bloom
+image4.jpg	A busy city street with tall buildings and traffic
+image5.jpg	A family having a picnic in a green meadow
+image6.jpg	A cat sleeping on a windowsill in sunlight
+image7.jpg	A mountain landscape with snow-capped peaks
+image8.jpg	A vintage car parked on a cobblestone street
+image9.jpg	A child playing with a golden retriever in a garden
+image10.jpg	A cup of coffee with latte art on a wooden table 
