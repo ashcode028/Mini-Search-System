@@ -1,7 +1,8 @@
 import os
+from io import BytesIO
+
 import requests
 from PIL import Image
-from io import BytesIO
 
 # Sample image URLs from Unsplash (free to use)
 IMAGE_URLS = {
@@ -14,28 +15,30 @@ IMAGE_URLS = {
     "image7.jpg": "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b",
     "image8.jpg": "https://images.unsplash.com/photo-1494905998402-395d579af36f",
     "image9.jpg": "https://images.unsplash.com/photo-1583511655857-d19b40a7a54e",
-    "image10.jpg": "https://images.unsplash.com/photo-1512568400610-62da28bc8a13"
+    "image10.jpg": "https://images.unsplash.com/photo-1512568400610-62da28bc8a13",
 }
+
 
 def download_images():
     """Download sample images from Unsplash"""
     # Create images directory if it doesn't exist
     os.makedirs("data/images", exist_ok=True)
-    
+
     # Download each image
     for filename, url in IMAGE_URLS.items():
         try:
             # Get the image
             response = requests.get(url)
             response.raise_for_status()
-            
+
             # Open and save the image
             img = Image.open(BytesIO(response.content))
             img.save(f"data/images/{filename}")
             print(f"Downloaded {filename}")
-            
+
         except Exception as e:
             print(f"Error downloading {filename}: {str(e)}")
 
+
 if __name__ == "__main__":
-    download_images() 
+    download_images()

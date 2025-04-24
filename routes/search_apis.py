@@ -1,7 +1,6 @@
 import os
 
 from fastapi import APIRouter, File, UploadFile
-from PIL import Image
 
 from handlers.search_handler import (
     process_images_from_folder,

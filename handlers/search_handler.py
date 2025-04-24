@@ -1,8 +1,5 @@
 import os
-from typing import Any, Dict, List, Tuple
-
-import numpy as np
-from PIL import Image
+from typing import List
 
 from handlers.search_engine import InMemorySearch
 from models.responses import SearchResult
@@ -11,9 +8,7 @@ from models.responses import SearchResult
 search_engine = InMemorySearch()
 
 
-def process_images_from_folder(
-    folder_path: str, caption_file: str = None
-) -> int:
+def process_images_from_folder(folder_path: str, caption_file: str = None) -> int:
     """Process images from a folder and return embeddings and metadata"""
     if not os.path.exists(folder_path):
         raise FileNotFoundError(f"Folder {folder_path} does not exist")
@@ -53,6 +48,6 @@ def search_by_text(query: str, k: int = 5) -> List[SearchResult]:
     return search_engine.search_by_text(query, k)
 
 
-def search_by_image(image_path:str, k: int = 5) -> List[SearchResult]:
+def search_by_image(image_path: str, k: int = 5) -> List[SearchResult]:
     """Search using image query"""
     return search_engine.search_by_image(image_path, k)

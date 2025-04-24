@@ -1,9 +1,8 @@
-import json
-import os
-from typing import Any, Dict, List, Tuple
-import pandas as pd
+from typing import List, Tuple
+
 import faiss
 import numpy as np
+import pandas as pd
 from PIL import Image
 from sentence_transformers import SentenceTransformer
 
@@ -49,10 +48,10 @@ class InMemorySearch:
 
             # Add to DataFrame
             self.df.loc[new_id] = {
-                'text': text,
-                'image_path': image_path,
-                'text_embedding': text_embedding,
-                'image_embedding': image_embedding
+                "text": text,
+                "image_path": image_path,
+                "text_embedding": text_embedding,
+                "image_embedding": image_embedding,
             }
 
             # Add to FAISS indices
@@ -60,7 +59,7 @@ class InMemorySearch:
             self.image_index.add(np.array([image_embedding]))
 
             return new_id
-        except Exception as e:
+        except Exception as _:
             raise
 
     def add_batch(self, items: List[Tuple[str, str]]) -> List[int]:
@@ -86,12 +85,15 @@ class InMemorySearch:
                 image_embeddings.append(image_embedding)
 
             # Add to DataFrame
-            batch_df = pd.DataFrame({
-                'text': texts,
-                'image_path': image_paths,
-                'text_embedding': text_embeddings,
-                'image_embedding': image_embeddings
-            }, index=ids)
+            batch_df = pd.DataFrame(
+                {
+                    "text": texts,
+                    "image_path": image_paths,
+                    "text_embedding": text_embeddings,
+                    "image_embedding": image_embeddings,
+                },
+                index=ids,
+            )
             self.df = pd.concat([self.df, batch_df])
 
             # Add to FAISS indices
@@ -99,9 +101,8 @@ class InMemorySearch:
             self.image_index.add(np.array(image_embeddings))
 
             return ids
-        except Exception as e:
+        except Exception as _:
             raise
-
 
     def search_by_text(self, query: str, k: int = 5) -> List[SearchResult]:
         """Search using text query"""
@@ -120,27 +121,29 @@ class InMemorySearch:
         for idx, distance in zip(indices[0], distances[0]):
             if idx < len(self.df):
                 caption, image_path = self.df.iloc[idx][:2]
-                results.append(SearchResult(
-                    image_path = image_path,
-                    caption=caption,
-                    score=float(1 / (1 + distance))
-                ))
+                results.append(
+                    SearchResult(
+                        image_path=image_path,
+                        caption=caption,
+                        score=float(1 / (1 + distance)),
+                    )
+                )
         return results
 
-    def _search_image(
-        self, query_embedding: np.ndarray, k: int
-    ) -> List[SearchResult]:
+    def _search_image(self, query_embedding: np.ndarray, k: int) -> List[SearchResult]:
         """Internal method for image search"""
         distances, indices = self.image_index.search(np.array([query_embedding]), k)
         results = []
         for idx, distance in zip(indices[0], distances[0]):
             if idx < len(self.df):
                 caption, image_path = self.df.iloc[idx][:2]
-                results.append(SearchResult(
-                    image_path=image_path,
-                    caption=caption,
-                    score=float(1 / (1 + distance))
-                ))
+                results.append(
+                    SearchResult(
+                        image_path=image_path,
+                        caption=caption,
+                        score=float(1 / (1 + distance)),
+                    )
+                )
         return results
 
     # def save(self, data_dir: str) -> None:

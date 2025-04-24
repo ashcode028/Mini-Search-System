@@ -15,11 +15,16 @@ A minimal semantic search system that indexes images and text descriptions, allo
 ```bash
 python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
+# optional conda env
+# conda activate <your_env>
 ```
 
 2. Install dependencies:
 ```bash
 pip install -r requirements.txt
+# This causes issues sometimes, it is recommended to use conda to install faiss-cpu package
+pip uninstall faiss-cpu
+conda install -c conda-forge faiss-cpu
 ```
 
 3. Create a `data` directory and add your images and captions:
@@ -29,10 +34,13 @@ mkdir data
 
 4. Run the application:
 ```bash
-uvicorn app:app --reload
+python app.py
 ```
 
 ## API Endpoints
+- `POST /add-items`: Api to upload images and captions
+  - Request body: `{ "folder_path": "your/images", "caption_file": "your/captions/sample_captions.txt"}`
+  - Returns: No of process files
 
 - `POST /search-text`: Search using text query
   - Request body: `{"query": "your search text", "k": 5}`
@@ -45,9 +53,15 @@ uvicorn app:app --reload
 ## Project Structure
 
 ```
-.
-├── app.py              # Main application file
-├── data/              # Directory for images and captions
-├── requirements.txt   # Project dependencies
-└── README.md         # This file
+├── README.md
+├── app.py                # Main application file
+├── data/                 #  Directory for images and captions
+├── handlers/            # api handlers
+│   ├── __init__.py
+│   ├── search_engine.py
+│   └── search_handler.py
+├── models/            # api request and response models
+├── requirements.txt     # Project dependencies
+├── routes/            # api routes
+     └── search_apis.py
 ```
