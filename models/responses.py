@@ -58,7 +58,7 @@ def handle_internal_error(error: Exception) -> HTTPException:
 
 # API Response Documentation
 API_RESPONSES = {
-    "add_item": {
+    "ingest-data": {
         404: {"model": ErrorResponse, "description": "Folder not found"},
         400: {"model": ErrorResponse, "description": "Invalid input"},
         500: {"model": ErrorResponse, "description": "Internal server error"},

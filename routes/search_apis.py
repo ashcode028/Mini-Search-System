@@ -2,7 +2,7 @@ import os
 
 from fastapi import APIRouter, Depends, File, UploadFile
 
-from handlers.search_handler import process_images_from_folder
+from handlers.search_handler import index_data, process_images_from_folder
 from handlers.search_instance import get_search_engine
 from models.responses import (
     API_RESPONSES,
@@ -19,16 +19,32 @@ router = APIRouter()
 
 
 @router.post(
-    "/ingest-data", response_model=AddItemResponse, responses=API_RESPONSES["add_item"]
+    "/ingest-data",
+    response_model=AddItemResponse,
+    responses=API_RESPONSES["ingest-data"],
 )
-async def add_item(request: AddItemRequest, search_engine=Depends(get_search_engine)):
-    """Add multiple images from a folder to the index"""
+async def ingest_data(
+    request: AddItemRequest, search_engine=Depends(get_search_engine)
+):
+    """
+    Add multiple images,captions from a folder to the search index.
+
+    This endpoint processes images from a given folder, adds them to the search index,
+    and returns the number of successfully processed images.
+
+    :param request: Request body containing folder path and caption file.
+    :param search_engine: Dependency that provides access to the search engine instance.
+    :return: A response with the status and count of processed images.
+    :raises: FileNotFoundError if the folder does not exist,
+             ValueError if no images are found in the folder,
+             Internal server errors for any unexpected issues.
+    """
     try:
-        processed_count = process_images_from_folder(
-            search_engine=search_engine,
+        items, processed_count = process_images_from_folder(
             folder_path=request.folder_path,
             caption_file=request.caption_file,
         )
+        index_data(search_engine=search_engine, items=items)
 
         return AddItemResponse(
             status="success",
@@ -50,7 +66,17 @@ async def add_item(request: AddItemRequest, search_engine=Depends(get_search_eng
     responses=API_RESPONSES["search_text"],
 )
 async def search_text(request: SearchRequest, search_engine=Depends(get_search_engine)):
-    """Search using text query"""
+    """
+    Perform a search using a text query.
+
+    This endpoint allows users to search the index using a text query and
+    return a list of the most relevant results.
+
+    :param request: Request body containing the search query and the number of results (k).
+    :param search_engine: Dependency that provides access to the search engine instance.
+    :return: A response with a list of search results.
+    :raises: Internal server error for any unexpected issues.
+    """
     try:
         results = search_engine.search_by_text(request.query, request.k)
         return SearchResponse(results=results)
@@ -66,7 +92,19 @@ async def search_text(request: SearchRequest, search_engine=Depends(get_search_e
 async def search_image(
     image: UploadFile = File(...), k: int = 5, search_engine=Depends(get_search_engine)
 ):
-    """Search using image query"""
+    """
+    Perform a search using an image query.
+
+    This endpoint allows users to upload an image, and the system will return a list
+    of similar images from the search index.
+
+    :param image: The uploaded image file to search with.
+    :param k: The number of similar images to return (default is 5).
+    :param search_engine: Dependency that provides access to the search engine instance.
+    :return: A response with a list of search results based on the image query.
+    :raises: Internal server error for any unexpected issues,
+             and ensures cleanup of temporary files in case of failure.
+    """
     # Save to temporary path
     temp_path = "temp_image.jpg"
     try:
