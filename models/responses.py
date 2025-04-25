@@ -35,7 +35,7 @@ class AddItemResponse(BaseResponse):
 # Request Models
 class AddItemRequest(BaseModel):
     folder_path: str
-    caption_file: Optional[str] = None
+    caption_file: str
 
 
 class SearchRequest(BaseModel):

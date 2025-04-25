@@ -21,7 +21,7 @@ async def lifespan(app: FastAPI):
 
     yield  # Run the app
 
-    # Cleanup (optional): save data if needed
+    # Save data
     search_engine.save(data_dir)
 
 

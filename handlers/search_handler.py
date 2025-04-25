@@ -4,13 +4,13 @@ from handlers.search_engine import InMemorySearch
 
 
 def process_images_from_folder(
-    search_engine: InMemorySearch, folder_path: str, caption_file: str = None
+    search_engine: InMemorySearch, folder_path: str, caption_file: str
 ) -> int:
     """Process images from a folder and return embeddings and metadata"""
     if not os.path.exists(folder_path):
         raise FileNotFoundError(f"Folder {folder_path} does not exist")
 
-    # Load captions if caption file is provided
+    # Load captions
     captions = {}
     if caption_file and os.path.exists(caption_file):
         with open(caption_file, "r") as f:
@@ -36,4 +36,5 @@ def process_images_from_folder(
         items.append((caption, image_path))
     # Process the batch
     search_engine.add_batch(items)
+    search_engine.save("data/sample_metadata")
     return len(items)
