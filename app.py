@@ -38,7 +38,7 @@ app.add_middleware(
 )
 
 # Include routers
-app.include_router(search_router, prefix="/api/v1")
+app.include_router(search_router, prefix="/v1")
 
 if __name__ == "__main__":
     import uvicorn

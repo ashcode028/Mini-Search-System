@@ -146,12 +146,13 @@ class InMemorySearch:
         return results
 
     def save(self, data_dir: str) -> None:
-        """Save both indices and dataframe to disk"""
+        """Save dataframe (without embeddings) and embeddings to disk"""
         if not os.path.exists(data_dir):
             os.makedirs(data_dir)
 
-        # Save dataframe with embeddings
-        self.df.to_pickle(os.path.join(data_dir, "dataframe.pkl"))
+        # Drop embeddings before saving df
+        df_to_save = self.df.drop(columns=["text_embedding", "image_embedding"])
+        df_to_save.to_parquet(os.path.join(data_dir, "dataframe.parquet"))
 
         # Save embeddings
         if self.text_index.ntotal > 0:
@@ -165,22 +166,35 @@ class InMemorySearch:
             np.save(os.path.join(data_dir, "image_embeddings.npy"), image_embeddings)
 
     def load(self, data_dir: str) -> None:
-        """Load both indices and dataframe from disk"""
+        """Load dataframe and embeddings from disk and reconstruct internal state"""
         if not os.path.exists(data_dir):
             return
 
-        # Load dataframe
-        df_path = os.path.join(data_dir, "dataframe.pkl")
+        # Load dataframe (without embeddings)
+        df_path = os.path.join(data_dir, "dataframe.parquet")
         if os.path.exists(df_path):
-            self.df = pd.read_pickle(df_path)
+            self.df = pd.read_parquet(df_path)
+        else:
+            self.df = pd.DataFrame()
 
         # Load embeddings
         text_embeddings_file = os.path.join(data_dir, "text_embeddings.npy")
+        image_embeddings_file = os.path.join(data_dir, "image_embeddings.npy")
+
+        text_embeddings = None
+        image_embeddings = None
+
         if os.path.exists(text_embeddings_file):
             text_embeddings = np.load(text_embeddings_file)
             self.text_index.add(text_embeddings)
 
-        image_embeddings_file = os.path.join(data_dir, "image_embeddings.npy")
         if os.path.exists(image_embeddings_file):
             image_embeddings = np.load(image_embeddings_file)
             self.image_index.add(image_embeddings)
+
+        # Attach embeddings back into df
+        if text_embeddings is not None and image_embeddings is not None:
+            # Sanity check
+            assert len(self.df) == len(text_embeddings) == len(image_embeddings)
+            self.df["text_embedding"] = list(text_embeddings)
+            self.df["image_embedding"] = list(image_embeddings)

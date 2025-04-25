@@ -19,7 +19,7 @@ router = APIRouter()
 
 
 @router.post(
-    "/add-item", response_model=AddItemResponse, responses=API_RESPONSES["add_item"]
+    "/ingest-data", response_model=AddItemResponse, responses=API_RESPONSES["add_item"]
 )
 async def add_item(request: AddItemRequest, search_engine=Depends(get_search_engine)):
     """Add multiple images from a folder to the index"""
