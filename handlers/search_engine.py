@@ -103,35 +103,46 @@ class InMemorySearch:
         except Exception as _:
             raise
 
-    def search_by_text(self, query: str, k: int = 5) -> List[SearchResult]:
+    def search_images_caption_by_text(
+        self, query: str, k: int = 5
+    ) -> List[SearchResult]:
+        """Search using text query and return results from both text and image indices"""
+        # Generate embedding for the query text
+        query_embedding = self.generate_text_embedding(query)
+        distances, indices = self.text_index.search(np.array([query_embedding]), k)
+        # Search using the text index
+        text_results = self._build_results(indices=indices, distances=distances)
+
+        # Generate image embedding for the query text
+        image_embedding = self.image_model.encode(query)
+
+        # Search using the image index
+        distances, indices = self.image_index.search(np.array([image_embedding]), k)
+        image_results = self._build_results(indices=indices, distances=distances)
+
+        # Combine results from both text and image search
+        all_results = text_results + image_results
+
+        # Sort the results by score (higher score means better match)
+        all_results.sort(key=lambda x: x.score, reverse=True)
+
+        # Return the top k results (from both text and image matches)
+        return all_results[:k]
+
+    def search_by_text_query(self, query: str, k: int = 5) -> List[SearchResult]:
         """Search using text query"""
         query_embedding = self.generate_text_embedding(query)
-        return self._search_text(query_embedding, k)
+        distances, indices = self.text_index.search(np.array([query_embedding]), k)
+        return self._build_results(indices=indices, distances=distances)
 
-    def search_by_image(self, image_path: str, k: int = 5) -> List[SearchResult]:
+    def search_by_image_query(self, image_path: str, k: int = 5) -> List[SearchResult]:
         """Search using image query"""
         query_embedding = self.generate_image_embedding(image_path)
-        return self._search_image(query_embedding, k)
-
-    def _search_text(self, query_embedding: np.ndarray, k: int) -> List[SearchResult]:
-        """Internal method for text search"""
-        distances, indices = self.text_index.search(np.array([query_embedding]), k)
-        results = []
-        for idx, distance in zip(indices[0], distances[0]):
-            if idx < len(self.df):
-                caption, image_path = self.df.iloc[idx][:2]
-                results.append(
-                    SearchResult(
-                        image_path=image_path,
-                        caption=caption,
-                        score=float(1 / (1 + distance)),
-                    )
-                )
-        return results
-
-    def _search_image(self, query_embedding: np.ndarray, k: int) -> List[SearchResult]:
-        """Internal method for image search"""
         distances, indices = self.image_index.search(np.array([query_embedding]), k)
+        return self._build_results(indices=indices, distances=distances)
+
+    def _build_results(self, indices, distances) -> List[SearchResult]:
+        """Construct SearchResult objects from indices and distances"""
         results = []
         for idx, distance in zip(indices[0], distances[0]):
             if idx < len(self.df):
