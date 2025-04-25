@@ -1,12 +1,9 @@
 import os
 
-from fastapi import APIRouter, File, UploadFile
+from fastapi import APIRouter, Depends, File, UploadFile
 
-from handlers.search_handler import (
-    process_images_from_folder,
-    search_by_image,
-    search_by_text,
-)
+from handlers.search_handler import process_images_from_folder
+from handlers.search_instance import get_search_engine
 from models.responses import (
     API_RESPONSES,
     AddItemRequest,
@@ -24,12 +21,15 @@ router = APIRouter()
 @router.post(
     "/add-item", response_model=AddItemResponse, responses=API_RESPONSES["add_item"]
 )
-async def add_item(request: AddItemRequest):
+async def add_item(request: AddItemRequest, search_engine=Depends(get_search_engine)):
     """Add multiple images from a folder to the index"""
     try:
         processed_count = process_images_from_folder(
-            request.folder_path, request.caption_file
+            search_engine=search_engine,
+            folder_path=request.folder_path,
+            caption_file=request.caption_file,
         )
+
         return AddItemResponse(
             status="success",
             message=f"Successfully processed {processed_count} images",
@@ -49,10 +49,10 @@ async def add_item(request: AddItemRequest):
     response_model=SearchResponse,
     responses=API_RESPONSES["search_text"],
 )
-async def search_text(request: SearchRequest):
+async def search_text(request: SearchRequest, search_engine=Depends(get_search_engine)):
     """Search using text query"""
     try:
-        results = search_by_text(request.query, request.k)
+        results = search_engine.search_by_text(request.query, request.k)
         return SearchResponse(results=results)
     except Exception as e:
         raise handle_internal_error(e)
@@ -63,19 +63,20 @@ async def search_text(request: SearchRequest):
     response_model=SearchResponse,
     responses=API_RESPONSES["search_image"],
 )
-async def search_image(image: UploadFile = File(...), k: int = 5):
+async def search_image(
+    image: UploadFile = File(...), k: int = 5, search_engine=Depends(get_search_engine)
+):
     """Search using image query"""
+    # Save to temporary path
+    temp_path = "temp_image.jpg"
     try:
-        # Save to temporary path
-        temp_path = "temp_image.jpg"
         with open(temp_path, "wb") as f:
             f.write(await image.read())
         # Search using the image
-        results = search_by_image(temp_path, k)
+        results = search_engine.search_by_image(temp_path, k)
 
         # Clean up
         os.remove(temp_path)
-
         return SearchResponse(results=results)
     except Exception as e:
         if os.path.exists(temp_path):

@@ -1,3 +1,4 @@
+import os
 from typing import List, Tuple
 
 import faiss
@@ -12,6 +13,7 @@ from models.responses import SearchResult
 class InMemorySearch:
     def __init__(self):
         """Initialize the in-memory search system with separate indices for text and images"""
+
         # Initialize models
         self.df = pd.DataFrame()
         self.text_model = SentenceTransformer("all-MiniLM-L6-v2")
@@ -23,9 +25,6 @@ class InMemorySearch:
         # Initialize FAISS indices
         self.text_index = faiss.IndexFlatL2(self.text_dimension)
         self.image_index = faiss.IndexFlatL2(self.image_dimension)
-
-        # Store metadata for both indices
-        self.metadata = []
 
     def generate_text_embedding(self, text: str) -> np.ndarray:
         """Generate embedding for text"""
@@ -146,44 +145,42 @@ class InMemorySearch:
                 )
         return results
 
-    # def save(self, data_dir: str) -> None:
-    #     """Save both indices and metadata to disk"""
-    #     if not os.path.exists(data_dir):
-    #         os.makedirs(data_dir)
-    #
-    #     # Save metadata
-    #     with open(os.path.join(data_dir, "metadata.json"), "w") as f:
-    #         json.dump(self.metadata, f)
-    #
-    #     # Save embeddings
-    #     if self.text_index.ntotal > 0:
-    #         text_embeddings = self.text_index.reconstruct_n(0, self.text_index.ntotal)
-    #         np.save(os.path.join(data_dir, "text_embeddings.npy"), text_embeddings)
-    #
-    #     if self.image_index.ntotal > 0:
-    #         image_embeddings = self.image_index.reconstruct_n(
-    #             0, self.image_index.ntotal
-    #         )
-    #         np.save(os.path.join(data_dir, "image_embeddings.npy"), image_embeddings)
-    #
-    # def load(self, data_dir: str) -> None:
-    #     """Load both indices and metadata from disk"""
-    #     if not os.path.exists(data_dir):
-    #         return
-    #
-    #     # Load metadata
-    #     metadata_file = os.path.join(data_dir, "metadata.json")
-    #     if os.path.exists(metadata_file):
-    #         with open(metadata_file, "r") as f:
-    #             self.metadata = json.load(f)
-    #
-    #     # Load embeddings
-    #     text_embeddings_file = os.path.join(data_dir, "text_embeddings.npy")
-    #     if os.path.exists(text_embeddings_file):
-    #         text_embeddings = np.load(text_embeddings_file)
-    #         self.text_index.add(text_embeddings)
-    #
-    #     image_embeddings_file = os.path.join(data_dir, "image_embeddings.npy")
-    #     if os.path.exists(image_embeddings_file):
-    #         image_embeddings = np.load(image_embeddings_file)
-    #         self.image_index.add(image_embeddings)
+    def save(self, data_dir: str) -> None:
+        """Save both indices and dataframe to disk"""
+        if not os.path.exists(data_dir):
+            os.makedirs(data_dir)
+
+        # Save dataframe with embeddings
+        self.df.to_pickle(os.path.join(data_dir, "dataframe.pkl"))
+
+        # Save embeddings
+        if self.text_index.ntotal > 0:
+            text_embeddings = self.text_index.reconstruct_n(0, self.text_index.ntotal)
+            np.save(os.path.join(data_dir, "text_embeddings.npy"), text_embeddings)
+
+        if self.image_index.ntotal > 0:
+            image_embeddings = self.image_index.reconstruct_n(
+                0, self.image_index.ntotal
+            )
+            np.save(os.path.join(data_dir, "image_embeddings.npy"), image_embeddings)
+
+    def load(self, data_dir: str) -> None:
+        """Load both indices and dataframe from disk"""
+        if not os.path.exists(data_dir):
+            return
+
+        # Load dataframe
+        df_path = os.path.join(data_dir, "dataframe.pkl")
+        if os.path.exists(df_path):
+            self.df = pd.read_pickle(df_path)
+
+        # Load embeddings
+        text_embeddings_file = os.path.join(data_dir, "text_embeddings.npy")
+        if os.path.exists(text_embeddings_file):
+            text_embeddings = np.load(text_embeddings_file)
+            self.text_index.add(text_embeddings)
+
+        image_embeddings_file = os.path.join(data_dir, "image_embeddings.npy")
+        if os.path.exists(image_embeddings_file):
+            image_embeddings = np.load(image_embeddings_file)
+            self.image_index.add(image_embeddings)

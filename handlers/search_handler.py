@@ -1,14 +1,11 @@
 import os
-from typing import List
 
 from handlers.search_engine import InMemorySearch
-from models.responses import SearchResult
-
-# Initialize search engine
-search_engine = InMemorySearch()
 
 
-def process_images_from_folder(folder_path: str, caption_file: str = None) -> int:
+def process_images_from_folder(
+    search_engine: InMemorySearch, folder_path: str, caption_file: str = None
+) -> int:
     """Process images from a folder and return embeddings and metadata"""
     if not os.path.exists(folder_path):
         raise FileNotFoundError(f"Folder {folder_path} does not exist")
@@ -37,17 +34,6 @@ def process_images_from_folder(folder_path: str, caption_file: str = None) -> in
         image_path = os.path.join(folder_path, image_file)
         caption = captions.get(image_file, "")  # Use empty string if no caption
         items.append((caption, image_path))
-
     # Process the batch
     search_engine.add_batch(items)
     return len(items)
-
-
-def search_by_text(query: str, k: int = 5) -> List[SearchResult]:
-    """Search using text query"""
-    return search_engine.search_by_text(query, k)
-
-
-def search_by_image(image_path: str, k: int = 5) -> List[SearchResult]:
-    """Search using image query"""
-    return search_engine.search_by_image(image_path, k)
