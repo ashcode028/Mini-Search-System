@@ -4,9 +4,9 @@ from typing import List, Tuple
 import faiss
 import numpy as np
 import pandas as pd
-from PIL import Image
-from sentence_transformers import SentenceTransformer
 
+from handlers.embedding_generator.clip_embeddings import CLIPEmbeddingGenerator
+from handlers.embedding_generator.minilm_embeddings import MiniLMGenerator
 from models.responses import SearchResult
 
 
@@ -14,33 +14,27 @@ class InMemorySearch:
     def __init__(self):
         """Initialize the in-memory search system with separate indices for text and images"""
 
-        # Initialize models
         self.df = pd.DataFrame()
-        self.text_model = SentenceTransformer("all-MiniLM-L6-v2")
-        self.image_model = SentenceTransformer("clip-ViT-B-32")
+        self.text_encoder = MiniLMGenerator()
+        self.clip_encoder = CLIPEmbeddingGenerator()
+        # Initialize models
+        self.image_model = self.clip_encoder.model
+        self.text_model = self.text_encoder.model
+
         # Get embedding dimensions
-        self.text_dimension = 384
-        self.image_dimension = 512
+        self.text_dimension = self.text_model.dimension
+        self.image_dimension = self.image_model.dimension
 
         # Initialize FAISS indices
         self.text_index = faiss.IndexFlatL2(self.text_dimension)
         self.image_index = faiss.IndexFlatL2(self.image_dimension)
 
-    def generate_text_embedding(self, text: str) -> np.ndarray:
-        """Generate embedding for text"""
-        return self.text_model.encode(text)
-
-    def generate_image_embedding(self, image_path: str) -> np.ndarray:
-        """Generate embedding for image"""
-        image = Image.open(image_path)
-        return self.image_model.encode(image)
-
     def add_item(self, text: str, image_path: str) -> int:
         """Add a new item with both text and image"""
         try:
             # Generate embeddings
-            text_embedding = self.generate_text_embedding(text)
-            image_embedding = self.generate_image_embedding(image_path)
+            text_embedding = self.text_encoder.encode_text(text)
+            image_embedding = self.clip_encoder.encode_image(image_path)
 
             # Create new ID
             new_id = len(self.df)
@@ -72,8 +66,8 @@ class InMemorySearch:
 
             for text, image_path in items:
                 # Generate embeddings
-                text_embedding = self.generate_text_embedding(text)
-                image_embedding = self.generate_image_embedding(image_path)
+                text_embedding = self.text_encoder.encode_text(text)
+                image_embedding = self.clip_encoder.encode_image(image_path)
 
                 # Store data
                 new_id = len(self.df) + len(ids)
@@ -131,13 +125,13 @@ class InMemorySearch:
 
     def search_by_text_query(self, query: str, k: int = 5) -> List[SearchResult]:
         """Search using text query"""
-        query_embedding = self.generate_text_embedding(query)
+        query_embedding = self.text_encoder.encode_text(query)
         distances, indices = self.text_index.search(np.array([query_embedding]), k)
         return self._build_results(indices=indices, distances=distances)
 
     def search_by_image_query(self, image_path: str, k: int = 5) -> List[SearchResult]:
         """Search using image query"""
-        query_embedding = self.generate_image_embedding(image_path)
+        query_embedding = self.clip_encoder.encode_image(image_path)
         distances, indices = self.image_index.search(np.array([query_embedding]), k)
         return self._build_results(indices=indices, distances=distances)
 
