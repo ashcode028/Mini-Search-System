@@ -151,7 +151,7 @@ class InMemorySearch:
         return results
 
     def save(self, data_dir: str) -> None:
-        """Save dataframe (without embeddings) and embeddings to disk"""
+        """Persist dataframe (without embeddings) and embeddings to disk"""
         if not os.path.exists(data_dir):
             os.makedirs(data_dir)
 
@@ -159,47 +159,34 @@ class InMemorySearch:
         df_to_save = self.df.drop(columns=["text_embedding", "image_embedding"])
         df_to_save.to_parquet(os.path.join(data_dir, "dataframe.parquet"))
 
-        # Save embeddings
-        if self.text_index.ntotal > 0:
-            text_embeddings = self.text_index.reconstruct_n(0, self.text_index.ntotal)
-            np.save(os.path.join(data_dir, "text_embeddings.npy"), text_embeddings)
+        # Save FAISS indexes
+        text_index_path = os.path.join(data_dir, "text.index")
+        image_index_path = os.path.join(data_dir, "image.index")
 
-        if self.image_index.ntotal > 0:
-            image_embeddings = self.image_index.reconstruct_n(
-                0, self.image_index.ntotal
-            )
-            np.save(os.path.join(data_dir, "image_embeddings.npy"), image_embeddings)
+        faiss.write_index(self.text_index, text_index_path)
+        faiss.write_index(self.image_index, image_index_path)
 
     def load(self, data_dir: str) -> None:
-        """Load dataframe and embeddings from disk and reconstruct internal state"""
+        """Load dataframe and FAISS indexes from disk and reconstruct internal state"""
         if not os.path.exists(data_dir):
             return
 
         # Load dataframe (without embeddings)
         df_path = os.path.join(data_dir, "dataframe.parquet")
-        if os.path.exists(df_path):
-            self.df = pd.read_parquet(df_path)
-        else:
-            self.df = pd.DataFrame()
+        self.df = (
+            pd.read_parquet(df_path) if os.path.exists(df_path) else pd.DataFrame()
+        )
 
-        # Load embeddings
-        text_embeddings_file = os.path.join(data_dir, "text_embeddings.npy")
-        image_embeddings_file = os.path.join(data_dir, "image_embeddings.npy")
+        # Load FAISS indexes
+        text_index_path = os.path.join(data_dir, "text.index")
+        image_index_path = os.path.join(data_dir, "image.index")
 
-        text_embeddings = None
-        image_embeddings = None
+        if os.path.exists(text_index_path):
+            self.text_index = faiss.read_index(text_index_path)
 
-        if os.path.exists(text_embeddings_file):
-            text_embeddings = np.load(text_embeddings_file)
-            self.text_index.add(text_embeddings)
+        if os.path.exists(image_index_path):
+            self.image_index = faiss.read_index(image_index_path)
 
-        if os.path.exists(image_embeddings_file):
-            image_embeddings = np.load(image_embeddings_file)
-            self.image_index.add(image_embeddings)
-
-        # Attach embeddings back into df
-        if text_embeddings is not None and image_embeddings is not None:
-            # Sanity check
-            assert len(self.df) == len(text_embeddings) == len(image_embeddings)
-            self.df["text_embedding"] = list(text_embeddings)
-            self.df["image_embedding"] = list(image_embeddings)
+        assert (
+            len(self.df) == self.text_index.ntotal == self.image_index.ntotal
+        ), "Data mismatch between DataFrame and FAISS indexes"
