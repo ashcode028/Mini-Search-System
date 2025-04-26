@@ -38,9 +38,9 @@ python app.py
 ```
 
 ## API Endpoints
-- `POST /add-items`: Api to upload images and captions
+- `POST /ingest-data`: Api to upload images and captions
   - Request body: `{ "folder_path": "your/images", "caption_file": "your/captions/sample_captions.txt"}`
-  - Returns: No of process files
+  - Returns: No of processed files
 
 - `POST /search-text`: Search using text query
   - Request body: `{"query": "your search text", "k": 5}`
