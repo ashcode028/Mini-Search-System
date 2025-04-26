@@ -22,8 +22,8 @@ class InMemorySearch:
         self.text_model = self.text_encoder.model
 
         # Get embedding dimensions
-        self.text_dimension = self.text_model.dimension
-        self.image_dimension = self.image_model.dimension
+        self.text_dimension = self.text_encoder.dimension
+        self.image_dimension = self.clip_encoder.dimension
 
         # Initialize FAISS indices
         self.text_index = faiss.IndexFlatL2(self.text_dimension)
@@ -102,13 +102,13 @@ class InMemorySearch:
     ) -> List[SearchResult]:
         """Search using text query and return results from both text and image indices"""
         # Generate embedding for the query text
-        query_embedding = self.generate_text_embedding(query)
+        query_embedding = self.text_encoder.encode_text(query)
         distances, indices = self.text_index.search(np.array([query_embedding]), k)
         # Search using the text index
         text_results = self._build_results(indices=indices, distances=distances)
 
         # Generate image embedding for the query text
-        image_embedding = self.image_model.encode(query)
+        image_embedding = self.clip_encoder.encode_text(query)
 
         # Search using the image index
         distances, indices = self.image_index.search(np.array([image_embedding]), k)

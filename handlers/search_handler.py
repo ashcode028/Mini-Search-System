@@ -11,7 +11,7 @@ def index_data(search_engine: InMemorySearch, items: List[Tuple[str, str]]) -> N
     :param search_engine: Instance of InMemorySearch to index data.
     :param items: List of tuples containing (caption, image_path) pairs.
     """
-    batch_size = 5
+    batch_size = 20
     total_items = len(items)
     num_batches = (total_items // batch_size) + (
         1 if total_items % batch_size != 0 else 0
@@ -40,7 +40,7 @@ def process_images_from_folder(folder_path: str, caption_file: str) -> (int, int
     if os.path.exists(caption_file):
         with open(caption_file, "r") as f:
             for line in f:
-                parts = line.strip().split("\t")
+                parts = line.strip().split(",")
                 if len(parts) >= 2:
                     image_name, caption = parts[0], parts[1]
                     captions[image_name] = caption

@@ -11,3 +11,4 @@ faiss-cpu==1.10.0
 pyarrow==19.0.1
 # dev only
 pre-commit
+kagglehub==0.3.12

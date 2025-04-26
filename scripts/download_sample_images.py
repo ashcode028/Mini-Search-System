@@ -1,6 +1,8 @@
 import os
+import shutil
 from io import BytesIO
 
+import kagglehub
 import requests
 from PIL import Image
 
@@ -40,5 +42,37 @@ def download_images():
             print(f"Error downloading {filename}: {str(e)}")
 
 
+KAGGLE_DATASET = "kanishkme/flicker-8k-image-dataset-captionstxt"
+DOWNLOAD_DIR = "data/flickr8k"
+
+
+def download_flickr8k(skip_if_exists=True):
+    if skip_if_exists and os.path.exists(DOWNLOAD_DIR) and os.listdir(DOWNLOAD_DIR):
+        print(f"Dataset already exists at {DOWNLOAD_DIR}. Skipping download.")
+        return
+
+    print(f"Downloading dataset: {KAGGLE_DATASET}")
+    dataset_path = kagglehub.dataset_download(KAGGLE_DATASET)
+    print(f"Downloaded to cache: {dataset_path}")
+
+    os.makedirs(DOWNLOAD_DIR, exist_ok=True)
+
+    # Move/copy folders to DOWNLOAD_DIR
+    for item in os.listdir(dataset_path):
+        src_path = os.path.join(dataset_path, item)
+        dest_path = os.path.join(DOWNLOAD_DIR, item)
+
+        if os.path.isdir(src_path):
+            print(f"Copying folder {item}...")
+            if os.path.exists(dest_path):
+                shutil.rmtree(dest_path)
+            shutil.copytree(src_path, dest_path)
+        else:
+            print(f"Copying file {item}...")
+            shutil.copy2(src_path, dest_path)
+
+    print(f"Dataset copied to {DOWNLOAD_DIR}")
+
+
 if __name__ == "__main__":
-    download_images()
+    download_flickr8k()
