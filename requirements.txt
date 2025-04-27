@@ -3,11 +3,12 @@ uvicorn==0.24.0
 python-multipart==0.0.6
 huggingface-hub==0.19.4
 Pillow==10.1.0
+pandas==2.2.3
 numpy==1.26.3
 pydantic==2.5.2
 requests==2.31.0
 sentence-transformers==2.2.2
-faiss-cpu==1.10.0
+# faiss-cpu==1.10.0
 pyarrow==19.0.1
 # dev only
 pre-commit

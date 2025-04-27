@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  semantic-search-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: semantic-search
+    ports:
+      - "8080:8000"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PYTHONDONTWRITEBYTECODE=1

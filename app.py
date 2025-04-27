@@ -3,8 +3,10 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.responses import JSONResponse
 
 from handlers.search_engine import InMemorySearch
+from models.responses import BaseResponse
 from routes.search_apis import router as search_router
 
 
@@ -36,6 +38,14 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# Landing page route
+@app.get("/", response_class=JSONResponse)
+async def live_response():
+    response = BaseResponse(message="Sematic Search is up and running", status="200")
+    return JSONResponse(content=response.model_dump(), status_code=200)
+
 
 # Include routers
 app.include_router(search_router, prefix="/v1")

@@ -27,7 +27,7 @@ async def ingest_data(
     request: AddItemRequest, search_engine=Depends(get_search_engine)
 ):
     """
-    Add multiple images,captions from a folder to the search index.
+    Add multiple images,captions from a folder to the search indexes.
 
     This endpoint processes images from a given folder, adds them to the search index,
     and returns the number of successfully processed images.
@@ -67,10 +67,10 @@ async def ingest_data(
 )
 async def search_text(request: SearchRequest, search_engine=Depends(get_search_engine)):
     """
-    Perform a search using a text query.
+     Perform image/captions search using an image query.
 
-    This endpoint allows users to search the index using a text query and
-    return a list of the most relevant results.
+    This endpoint allows users to search the index using a text query and the system will return a list
+    of similar images and their captions with similar scores.
 
     :param request: Request body containing the search query and the number of results (k).
     :param search_engine: Dependency that provides access to the search engine instance.
@@ -93,10 +93,10 @@ async def search_image(
     image: UploadFile = File(...), k: int = 5, search_engine=Depends(get_search_engine)
 ):
     """
-    Perform a search using an image query.
+    Perform image/captions search using an image query.
 
     This endpoint allows users to upload an image, and the system will return a list
-    of similar images from the search index.
+    of similar images and their captions with similar scores.
 
     :param image: The uploaded image file to search with.
     :param k: The number of similar images to return (default is 5).
