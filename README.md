@@ -109,3 +109,5 @@ python app.py
         ├── test_index_pq.py
         └── test_utils.py
 ```
+## High Level Architecture
+![image](https://github.com/user-attachments/assets/502d4fee-f025-4d54-a2ab-055ed4ac72d2)
