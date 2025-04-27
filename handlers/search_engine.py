@@ -27,8 +27,10 @@ class InMemorySearch:
 
         # Initialize FAISS indices
         self.text_index = faiss.IndexFlatL2(self.text_dimension)
-        self.image_index = faiss.IndexFlatL2(self.image_dimension)
-        self.clip_text_index = faiss.IndexFlatL2(self.image_dimension)
+        self.image_index = faiss.IndexFlatIP(self.image_dimension)  # Cosine similarity
+        self.clip_text_index = faiss.IndexFlatIP(
+            self.image_dimension
+        )  # Cosine similarity
 
     def add_item(self, text: str, image_path: str) -> int:
         """Add a new item with both text and image"""
