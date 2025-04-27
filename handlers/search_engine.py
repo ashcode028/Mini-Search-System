@@ -28,6 +28,7 @@ class InMemorySearch:
         # Initialize FAISS indices
         self.text_index = faiss.IndexFlatL2(self.text_dimension)
         self.image_index = faiss.IndexFlatL2(self.image_dimension)
+        self.clip_text_index = faiss.IndexFlatL2(self.image_dimension)
 
     def add_item(self, text: str, image_path: str) -> int:
         """Add a new item with both text and image"""
@@ -35,7 +36,7 @@ class InMemorySearch:
             # Generate embeddings
             text_embedding = self.text_encoder.encode_text(text)
             image_embedding = self.clip_encoder.encode_image(image_path)
-
+            clip_text_embedding = self.clip_encoder.encode_text(text)
             # Create new ID
             new_id = len(self.df)
 
@@ -49,6 +50,7 @@ class InMemorySearch:
 
             # Add to FAISS indices
             self.text_index.add(np.array([text_embedding]))
+            self.clip_text_index.add(np.array([clip_text_embedding]))
             self.image_index.add(np.array([image_embedding]))
 
             return new_id
@@ -63,11 +65,13 @@ class InMemorySearch:
             image_paths = []
             text_embeddings = []
             image_embeddings = []
+            clip_text_embeddings = []
 
             for text, image_path in items:
                 # Generate embeddings
                 text_embedding = self.text_encoder.encode_text(text)
                 image_embedding = self.clip_encoder.encode_image(image_path)
+                clip_text_embedding = self.clip_encoder.encode_text(text)
 
                 # Store data
                 new_id = len(self.df) + len(ids)
@@ -76,6 +80,7 @@ class InMemorySearch:
                 image_paths.append(image_path)
                 text_embeddings.append(text_embedding)
                 image_embeddings.append(image_embedding)
+                clip_text_embeddings.append(clip_text_embedding)
 
             # Add to DataFrame
             batch_df = pd.DataFrame(
@@ -91,6 +96,7 @@ class InMemorySearch:
 
             # Add to FAISS indices
             self.text_index.add(np.array(text_embeddings))
+            self.clip_text_index.add(np.array(clip_text_embeddings))
             self.image_index.add(np.array(image_embeddings))
 
             return ids
@@ -101,18 +107,10 @@ class InMemorySearch:
         self, query: str, k: int = 5
     ) -> List[SearchResult]:
         """Search using text query and return results from both text and image indices"""
-        # Generate embedding for the query text
-        query_embedding = self.text_encoder.encode_text(query)
-        distances, indices = self.text_index.search(np.array([query_embedding]), k)
         # Search using the text index
-        text_results = self._build_results(indices=indices, distances=distances)
-
-        # Generate image embedding for the query text
-        image_embedding = self.clip_encoder.encode_text(query)
-
+        text_results = self.search_captions_by_text_query(query=query, k=k)
         # Search using the image index
-        distances, indices = self.image_index.search(np.array([image_embedding]), k)
-        image_results = self._build_results(indices=indices, distances=distances)
+        image_results = self.search_images_by_text_query(query=query, k=k)
 
         # Combine results from both text and image search
         all_results = text_results + image_results
@@ -123,16 +121,51 @@ class InMemorySearch:
         # Return the top k results (from both text and image matches)
         return all_results[:k]
 
-    def search_by_text_query(self, query: str, k: int = 5) -> List[SearchResult]:
+    def search_images_caption_by_image(
+        self, image_path: str, k: int = 5
+    ) -> List[SearchResult]:
+        """Search using image query and return results from both text and image indices"""
+        # Search using the text index
+        text_results = self.search_captions_by_image_query(image_path=image_path, k=k)
+        # Search using the image index
+        image_results = self.search_images_by_image_query(image_path=image_path, k=k)
+
+        # Combine results from both text and image search
+        all_results = text_results + image_results
+
+        # Sort the results by score (higher score means better match)
+        all_results.sort(key=lambda x: x.score, reverse=True)
+
+        # Return the top k results (from both text and image matches)
+        return all_results[:k]
+
+    def search_captions_by_text_query(
+        self, query: str, k: int = 5
+    ) -> List[SearchResult]:
         """Search using text query"""
         query_embedding = self.text_encoder.encode_text(query)
         distances, indices = self.text_index.search(np.array([query_embedding]), k)
         return self._build_results(indices=indices, distances=distances)
 
-    def search_by_image_query(self, image_path: str, k: int = 5) -> List[SearchResult]:
+    def search_images_by_text_query(self, query: str, k: int = 5) -> List[SearchResult]:
+        image_embedding = self.clip_encoder.encode_text(query)
+        distances, indices = self.image_index.search(np.array([image_embedding]), k)
+        return self._build_results(indices=indices, distances=distances)
+
+    def search_images_by_image_query(
+        self, image_path: str, k: int = 5
+    ) -> List[SearchResult]:
         """Search using image query"""
         query_embedding = self.clip_encoder.encode_image(image_path)
         distances, indices = self.image_index.search(np.array([query_embedding]), k)
+        return self._build_results(indices=indices, distances=distances)
+
+    def search_captions_by_image_query(
+        self, image_path: str, k: int = 5
+    ) -> List[SearchResult]:
+        """Search using image query"""
+        text_embedding = self.clip_encoder.encode_image(image_path)
+        distances, indices = self.clip_text_index.search(np.array([text_embedding]), k)
         return self._build_results(indices=indices, distances=distances)
 
     def _build_results(self, indices, distances) -> List[SearchResult]:
@@ -161,9 +194,11 @@ class InMemorySearch:
 
         # Save FAISS indexes
         text_index_path = os.path.join(data_dir, "text.index")
+        clip_text_index_path = os.path.join(data_dir, "clip_text.index")
         image_index_path = os.path.join(data_dir, "image.index")
 
         faiss.write_index(self.text_index, text_index_path)
+        faiss.write_index(self.clip_text_index, clip_text_index_path)
         faiss.write_index(self.image_index, image_index_path)
 
     def load(self, data_dir: str) -> None:
@@ -179,14 +214,21 @@ class InMemorySearch:
 
         # Load FAISS indexes
         text_index_path = os.path.join(data_dir, "text.index")
+        clip_text_index_path = os.path.join(data_dir, "clip_text.index")
         image_index_path = os.path.join(data_dir, "image.index")
 
         if os.path.exists(text_index_path):
             self.text_index = faiss.read_index(text_index_path)
 
+        if os.path.exists(clip_text_index_path):
+            self.clip_text_index = faiss.read_index(clip_text_index_path)
+
         if os.path.exists(image_index_path):
             self.image_index = faiss.read_index(image_index_path)
 
         assert (
-            len(self.df) == self.text_index.ntotal == self.image_index.ntotal
+            len(self.df)
+            == self.text_index.ntotal
+            == self.image_index.ntotal
+            == self.clip_text_index.ntotal
         ), "Data mismatch between DataFrame and FAISS indexes"

@@ -78,7 +78,7 @@ async def search_text(request: SearchRequest, search_engine=Depends(get_search_e
     :raises: Internal server error for any unexpected issues.
     """
     try:
-        results = search_engine.search_by_text_query(request.query, request.k)
+        results = search_engine.search_images_caption_by_text(request.query, request.k)
         return SearchResponse(results=results)
     except Exception as e:
         raise handle_internal_error(e)
@@ -111,7 +111,7 @@ async def search_image(
         with open(temp_path, "wb") as f:
             f.write(await image.read())
         # Search using the image
-        results = search_engine.search_by_image_query(temp_path, k)
+        results = search_engine.search_images_caption_by_image(temp_path, k)
 
         # Clean up
         os.remove(temp_path)
