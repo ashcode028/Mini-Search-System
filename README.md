@@ -109,5 +109,16 @@ python app.py
         ├── test_index_pq.py
         └── test_utils.py
 ```
+## High-Level Workflow
+
+Ingestion: New data (images and captions) is ingested into the system, with embeddings generated and stored in FAISS indices for fast retrieval.
+
+Indexing: Each text and image is embedded and indexed by its respective FAISS index for fast similarity searches.
+
+Search: Users can perform searches by providing either a text query or an image query. The system retrieves the top-k most relevant items from the indices.
+
+Persistence: The system saves and loads its state (DataFrame and FAISS indices) to/from disk to ensure persistence across application restarts.
+
+
 ## High Level Architecture
 ![image](https://github.com/user-attachments/assets/502d4fee-f025-4d54-a2ab-055ed4ac72d2)
