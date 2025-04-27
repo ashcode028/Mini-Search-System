@@ -11,7 +11,7 @@ def index_data(search_engine: InMemorySearch, items: List[Tuple[str, str]]) -> N
     :param search_engine: Instance of InMemorySearch to index data.
     :param items: List of tuples containing (caption, image_path) pairs.
     """
-    batch_size = 20
+    batch_size = 50
     total_items = len(items)
     num_batches = (total_items // batch_size) + (
         1 if total_items % batch_size != 0 else 0
