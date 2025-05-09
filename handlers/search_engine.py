@@ -1,4 +1,5 @@
 import os
+from collections import Counter
 from typing import List, Tuple
 
 import faiss
@@ -123,6 +124,34 @@ class InMemorySearch:
         # Return the top k results (from both text and image matches)
         return all_results[:k]
 
+    def rerank_results(
+        self, text_results: List[SearchResult], image_results: List[SearchResult]
+    ):
+        # give weightage and rank more if it exists in both
+        all_results = text_results + image_results
+
+        freq_list = [result.image_path for result in all_results]
+        count_freq = Counter(freq_list)
+        seen = {}
+        final_results = []
+        for result in all_results:
+            result.final_score += count_freq[result.image_path]
+            if result.type == "text":
+                result.final_score += 0.2 * result.score
+            else:
+                result.final_score += 0.8 * result.score
+            # for uniqueness
+            if result.image_path in seen:
+                seen[result.image_path].final_score += result.final_score
+            else:
+                seen[result.image_path] = result
+
+        for key, val in seen.items():
+            final_results.append(val)
+
+        final_results.sort(key=lambda x: x.final_score, reverse=True)
+        return final_results
+
     def search_images_caption_by_image(
         self, image_path: str, k: int = 5
     ) -> List[SearchResult]:
@@ -132,11 +161,14 @@ class InMemorySearch:
         # Search using the image index
         image_results = self.search_images_by_image_query(image_path=image_path, k=k)
 
-        # Combine results from both text and image search
-        all_results = text_results + image_results
+        all_results = self.rerank_results(
+            text_results=text_results, image_results=image_results
+        )
+        # # Combine results from both text and image search
+        # all_results = text_results + image_results
 
-        # Sort the results by score (higher score means better match)
-        all_results.sort(key=lambda x: x.score, reverse=True)
+        # # Sort the results by score (higher score means better match)
+        # all_results.sort(key=lambda x: x.score, reverse=True)
 
         # Return the top k results (from both text and image matches)
         return all_results[:k]
@@ -152,7 +184,7 @@ class InMemorySearch:
     def search_images_by_text_query(self, query: str, k: int = 5) -> List[SearchResult]:
         image_embedding = self.clip_encoder.encode_text(query)
         distances, indices = self.image_index.search(np.array([image_embedding]), k)
-        return self._build_results(indices=indices, distances=distances)
+        return self._build_results(indices=indices, distances=distances, type="text")
 
     def search_images_by_image_query(
         self, image_path: str, k: int = 5
@@ -160,7 +192,7 @@ class InMemorySearch:
         """Search using image query"""
         query_embedding = self.clip_encoder.encode_image(image_path)
         distances, indices = self.image_index.search(np.array([query_embedding]), k)
-        return self._build_results(indices=indices, distances=distances)
+        return self._build_results(indices=indices, distances=distances, type="image")
 
     def search_captions_by_image_query(
         self, image_path: str, k: int = 5
@@ -168,9 +200,9 @@ class InMemorySearch:
         """Search using image query"""
         text_embedding = self.clip_encoder.encode_image(image_path)
         distances, indices = self.clip_text_index.search(np.array([text_embedding]), k)
-        return self._build_results(indices=indices, distances=distances)
+        return self._build_results(indices=indices, distances=distances, type="text")
 
-    def _build_results(self, indices, distances) -> List[SearchResult]:
+    def _build_results(self, indices, distances, type) -> List[SearchResult]:
         """Construct SearchResult objects from indices and distances"""
         results = []
         for idx, distance in zip(indices[0], distances[0]):
@@ -181,6 +213,7 @@ class InMemorySearch:
                         image_path=image_path,
                         caption=caption,
                         score=float(1 / (1 + distance)),
+                        type=type,
                     )
                 )
         return results

@@ -20,6 +20,8 @@ class SearchResult(BaseModel):
     image_path: str
     caption: Optional[str]
     score: float
+    type: str
+    final_score: float = 0
 
 
 class SearchResponse(BaseModel):
